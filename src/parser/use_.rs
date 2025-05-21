@@ -1,13 +1,21 @@
 use crate::ast::Stmt;
 use crate::lexer::Token;
 
-// use "lib.nasl"; のような構文をサポート
+// useはRustの予約語のため、use_nasl.rsというファイル名に。
+// use lib-nasl; のような構文をサポート
 pub fn parse_use(tokens: &[Token], pos: &mut usize) -> Option<Stmt> {
     if let Some(Token::Ident(s)) = tokens.get(*pos) {
         if s == "use" {
             *pos += 1;
-            if let Some(Token::StringLiteral(filename)) = tokens.get(*pos) {
+            // Rust風: use lib; use foo::bar; use foo::*; など
+            if let Some(Token::Ident(modname)) = tokens.get(*pos) {
                 *pos += 1;
+                // use lib; → lib.nasl
+                let fname = format!("{}.nasl", modname);
+                return Some(Stmt::Import(fname));
+            } else if let Some(Token::StringLiteral(filename)) = tokens.get(*pos) {
+                *pos += 1;
+                // use "lib.nasl"; も許容
                 return Some(Stmt::Import(filename.clone()));
             }
         }

@@ -2,6 +2,7 @@ mod expr;
 mod func;
 mod let_stmt;
 mod print;
+// useはRustの予約語のため、use_nasl.rsというファイル名に。
 mod use_;
 
 use crate::ast::Stmt;
@@ -10,6 +11,7 @@ use expr::parse_expr;
 use func::parse_funcdef;
 use let_stmt::parse_let;
 use print::parse_print;
+// useはRustの予約語のため、use_nasl.rsというファイル名に。
 use use_::parse_use;
 
 pub fn parse(tokens: &[Token]) -> Vec<Stmt> {

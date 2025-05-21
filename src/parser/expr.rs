@@ -25,7 +25,9 @@ pub fn parse_term(tokens: &[Token], pos: &mut usize) -> Expr {
             if tokens.get(*pos) == Some(&Token::LParen) {
                 *pos += 1;
                 let mut args = Vec::new();
-                while tokens.get(*pos) != Some(&Token::RParen) && tokens.get(*pos) != Some(&Token::EOF) {
+                while tokens.get(*pos) != Some(&Token::RParen)
+                    && tokens.get(*pos) != Some(&Token::EOF)
+                {
                     args.push(parse_expr(tokens, pos));
                     if tokens.get(*pos) == Some(&Token::Comma) {
                         *pos += 1;
@@ -41,8 +43,6 @@ pub fn parse_term(tokens: &[Token], pos: &mut usize) -> Expr {
                 Expr::Var(name)
             }
         }
-        _ => {
-            Expr::Number(0)
-        }
+        _ => Expr::Number(0),
     }
 }

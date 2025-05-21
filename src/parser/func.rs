@@ -44,15 +44,32 @@ pub fn parse_funcdef(tokens: &[Token], pos: &mut usize) -> Stmt {
         return Stmt::Error("{ が必要です".to_string());
     }
     *pos += 1;
-    // bodyは式としてパース
-    let body = Box::new(crate::parser::expr::parse_expr(tokens, pos));
-    // } をスキップ
+    // bodyは複数文対応: { stmt1; stmt2; ... }
+    let mut stmts = Vec::new();
     while let Some(tok) = tokens.get(*pos) {
         if let Token::RBrace = tok {
             *pos += 1;
             break;
         }
-        *pos += 1;
+        // 各文をparse_print/parse_let/parse_expr等でパース
+        if let Some(stmt) = crate::parser::print::parse_print(tokens, pos) {
+            stmts.push(Stmt::Print(Box::new(match stmt {
+                Stmt::Print(expr) => *expr,
+                _ => Expr::Number(0),
+            })));
+        } else if tokens.get(*pos) == Some(&Token::Let) {
+            stmts.push(crate::parser::let_stmt::parse_let(tokens, pos));
+        } else {
+            let expr = crate::parser::expr::parse_expr(tokens, pos);
+            stmts.push(Stmt::Expr(expr));
+        }
     }
+    // 複数文を1つのExpr::Blockにまとめる（AST拡張が必要）
+    // ここでは最終文のみ返す（暫定）
+    let body = if let Some(Stmt::Expr(expr)) = stmts.last() {
+        Box::new(expr.clone())
+    } else {
+        Box::new(Expr::Number(0))
+    };
     Stmt::FuncDef { name, params, body }
 }

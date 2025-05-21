@@ -20,7 +20,13 @@ pub fn eval_stmts(stmts: &[Stmt]) -> i64 {
                 let code = fs::read_to_string(filename).expect("importファイルが読み込めません");
                 let tokens = crate::lexer::tokenize(&code);
                 let imported_stmts = crate::parser::parse(&tokens);
-                // 再帰的にimportを評価
+                // 関数定義をマージ
+                for s in &imported_stmts {
+                    if let Stmt::FuncDef { name, params, body } = s {
+                        funcs.insert(name.clone(), (params.clone(), *body.clone()));
+                    }
+                }
+                // 再帰的にimportを評価（副作用目的）
                 eval_stmts(&imported_stmts);
             }
             Stmt::FuncDef { name, params, body } => {
