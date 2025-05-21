@@ -90,6 +90,27 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
                 tokens.push(Token::StringLiteral(s));
             }
+            '/' => {
+                chars.next();
+                if let Some(&'/') = chars.peek() {
+                    // 行コメント: // ～行末までスキップ
+                    while let Some(&d) = chars.peek() {
+                        chars.next();
+                        if d == '\n' {
+                            break;
+                        }
+                    }
+                } else {
+                    // 単独の/は不正文字扱い
+                    let pos = input.len() - chars.clone().count();
+                    let context: String =
+                        input.chars().skip(pos.saturating_sub(5)).take(10).collect();
+                    tokens.push(Token::Error(format!(
+                        "不正な文字: '/' (U+002F) 位置: {} 付近: '{}'",
+                        pos, context
+                    )));
+                }
+            }
             ' ' | '\n' | '\r' | '\t' => {
                 chars.next();
             }

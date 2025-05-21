@@ -29,8 +29,8 @@ pub fn parse_let(tokens: &[Token], pos: &mut usize) -> Stmt {
         return Stmt::Error("= が必要です".to_string());
     }
     *pos += 1;
-    // 値は式としてパース（仮）
-    let value = Expr::Number(0); // TODO: parse_exprで本来はパース
+    // 値は式としてパース
+    let value = crate::parser::expr::parse_expr(tokens, pos);
     // ; をスキップ
     if tokens.get(*pos) == Some(&Token::EOF) {
         // 終端
@@ -42,5 +42,38 @@ pub fn parse_let(tokens: &[Token], pos: &mut usize) -> Stmt {
         value,
         mutable,
         ty,
+    }
+}
+
+#[cfg(feature = "nom")]
+pub mod nom_let_parser {
+    use super::*;
+    use nom::{
+        IResult,
+        bytes::complete::tag,
+        character::complete::{alpha1, alphanumeric1, multispace0},
+        combinator::{opt, recognize},
+        multi::many1,
+        sequence::tuple,
+    };
+
+    // 入力: &str, 出力: (mutable, name, ty, value)
+    pub fn parse_let(input: &str) -> IResult<&str, (bool, String, Option<String>, String)> {
+        let (input, _) = multispace0(input)?;
+        let (input, _) = tag("let")(input)?;
+        let (input, _) = multispace0(input)?;
+        let (input, mut_kw) = opt(tag("mut"))(input)?;
+        let mutable = mut_kw.is_some();
+        let (input, _) = multispace0(input)?;
+        let (input, name) = alpha1(input)?;
+        let (input, _) = multispace0(input)?;
+        let (input, ty) = opt(tuple((tag(":"), multispace0, alpha1)))(input)?;
+        let ty = ty.map(|(_, _, t)| t.to_string());
+        let (input, _) = multispace0(input)?;
+        let (input, _) = tag("=")(input)?;
+        let (input, _) = multispace0(input)?;
+        // 値はここでは文字列としてパース（本来は式パーサを呼ぶ）
+        let (input, value) = recognize(many1(alphanumeric1))(input)?;
+        Ok((input, (mutable, name.to_string(), ty, value.to_string())))
     }
 }

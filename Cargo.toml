@@ -5,3 +5,7 @@ edition = "2024"
 
 [dependencies]
 itertools = "0.12"
+nom = { version = "7", optional = true }
+
+[features]
+nom = ["dep:nom"]
