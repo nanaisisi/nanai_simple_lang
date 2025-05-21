@@ -14,6 +14,10 @@ enum Token {
     LBrace,
     RBrace,
     Comma,
+    Let,
+    Mut,
+    Colon,
+    Eq,
     EOF,
 }
 
@@ -59,6 +63,14 @@ fn tokenize(input: &str) -> Vec<Token> {
                 tokens.push(Token::Comma);
                 chars.next();
             }
+            '=' => {
+                tokens.push(Token::Eq);
+                chars.next();
+            }
+            ':' => {
+                tokens.push(Token::Colon);
+                chars.next();
+            }
             ' ' | '\n' | '\t' => {
                 chars.next();
             }
@@ -73,6 +85,8 @@ fn tokenize(input: &str) -> Vec<Token> {
                     }
                 }
                 match ident.as_str() {
+                    "let" => tokens.push(Token::Let),
+                    "mut" => tokens.push(Token::Mut),
                     "pub" => tokens.push(Token::Pub),
                     "fn" => tokens.push(Token::Fn),
                     _ => tokens.push(Token::Ident(ident)),
@@ -104,6 +118,12 @@ enum Stmt {
         params: Vec<String>,
         body: Box<Expr>,
     },
+    Let {
+        name: String,
+        value: Expr,
+        mutable: bool,
+        ty: Option<String>,
+    },
 }
 
 // 構文解析
@@ -111,8 +131,9 @@ fn parse(tokens: &[Token]) -> Vec<Stmt> {
     let mut pos = 0;
     let mut stmts = Vec::new();
     while tokens.get(pos) != Some(&Token::EOF) {
-        // pub fn ... または fn ... どちらも関数定義として扱う
-        if tokens.get(pos) == Some(&Token::Pub) {
+        if tokens.get(pos) == Some(&Token::Let) {
+            stmts.push(parse_let(tokens, &mut pos));
+        } else if tokens.get(pos) == Some(&Token::Pub) {
             stmts.push(parse_funcdef(tokens, &mut pos));
         } else if tokens.get(pos) == Some(&Token::Fn) {
             stmts.push(parse_funcdef(tokens, &mut pos));
@@ -173,6 +194,42 @@ fn parse_funcdef(tokens: &[Token], pos: &mut usize) -> Stmt {
     }
 }
 
+fn parse_let(tokens: &[Token], pos: &mut usize) -> Stmt {
+    *pos += 1; // let
+    let mut mutable = false;
+    if tokens.get(*pos) == Some(&Token::Mut) {
+        mutable = true;
+        *pos += 1;
+    }
+    let name = if let Token::Ident(ref s) = tokens[*pos] {
+        s.clone()
+    } else {
+        panic!("変数名が必要");
+    };
+    *pos += 1;
+    let mut ty = None;
+    if tokens.get(*pos) == Some(&Token::Colon) {
+        *pos += 1;
+        if let Token::Ident(ref t) = tokens[*pos] {
+            ty = Some(t.clone());
+            *pos += 1;
+        } else {
+            panic!("型名が必要");
+        }
+    }
+    if tokens.get(*pos) != Some(&Token::Eq) {
+        panic!("= が必要");
+    }
+    *pos += 1;
+    let value = parse_expr(tokens, pos);
+    Stmt::Let {
+        name,
+        value,
+        mutable,
+        ty,
+    }
+}
+
 fn parse_expr(tokens: &[Token], pos: &mut usize) -> Expr {
     let mut left = parse_term(tokens, pos);
     while tokens.get(*pos) == Some(&Token::Plus) {
@@ -218,14 +275,20 @@ fn parse_term(tokens: &[Token], pos: &mut usize) -> Expr {
 
 fn eval_stmts(stmts: &[Stmt]) -> i64 {
     let mut funcs: HashMap<String, (Vec<String>, Expr)> = HashMap::new();
+    let mut vars: HashMap<String, i64> = HashMap::new();
     let mut last_result = 0;
     for stmt in stmts {
         match stmt {
             Stmt::FuncDef { name, params, body } => {
                 funcs.insert(name.clone(), (params.clone(), *body.clone()));
             }
+            Stmt::Let { name, value, .. } => {
+                let v = eval_expr(value, &funcs, &vars);
+                vars.insert(name.clone(), v);
+                last_result = v;
+            }
             Stmt::Expr(expr) => {
-                last_result = eval_expr(expr, &funcs, &HashMap::new());
+                last_result = eval_expr(expr, &funcs, &vars);
             }
         }
     }
