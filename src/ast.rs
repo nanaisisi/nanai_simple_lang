@@ -23,4 +23,5 @@ pub enum Stmt {
     },
     Print(Box<Expr>),
     Import(String),
+    Error(String),
 }

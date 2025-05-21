@@ -16,6 +16,7 @@ pub enum Token {
     Colon,
     Eq,
     StringLiteral(String),
+    Error(String),
     EOF,
 }
 
@@ -111,7 +112,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
             }
             _ => {
-                panic!("不正な文字: {} (U+{:04X})", c, c as u32);
+                tokens.push(Token::Error(format!(
+                    "不正な文字: {} (U+{:04X})",
+                    c, c as u32
+                )));
+                chars.next();
             }
         }
     }

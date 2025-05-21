@@ -1,1 +1,5 @@
-print(1 + 2)
+import "lib.nasl"
+
+fn main() {
+    print(42)
+}

@@ -39,6 +39,10 @@ pub fn eval_stmts(stmts: &[Stmt]) -> i64 {
                 std_funcs["print"](vec![v]);
                 last_result = v;
             }
+            Stmt::Error(msg) => {
+                eprintln!("[解析エラー] {}", msg);
+                last_result = 0;
+            }
         }
     }
     last_result
