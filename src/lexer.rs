@@ -112,9 +112,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
             }
             _ => {
+                let pos = input.len() - chars.clone().count();
+                let context: String = input.chars().skip(pos.saturating_sub(5)).take(10).collect();
                 tokens.push(Token::Error(format!(
-                    "不正な文字: {} (U+{:04X})",
-                    c, c as u32
+                    "不正な文字: '{}' (U+{:04X}) 位置: {} 付近: '{}'",
+                    c, c as u32, pos, context
                 )));
                 chars.next();
             }
