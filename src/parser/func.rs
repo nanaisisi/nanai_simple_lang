@@ -44,8 +44,8 @@ pub fn parse_funcdef(tokens: &[Token], pos: &mut usize) -> Stmt {
         return Stmt::Error("{ が必要です".to_string());
     }
     *pos += 1;
-    // bodyは式としてパース（簡易）
-    let body = Box::new(Expr::Number(0)); // TODO: parse_exprで本来はパース
+    // bodyは式としてパース
+    let body = Box::new(crate::parser::expr::parse_expr(tokens, pos));
     // } をスキップ
     while let Some(tok) = tokens.get(*pos) {
         if let Token::RBrace = tok {

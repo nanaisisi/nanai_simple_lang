@@ -67,8 +67,7 @@ fn eval_expr(
                     .map(|a| eval_expr(a, funcs, vars, std_funcs))
                     .collect();
                 f(arg_vals)
-            } else {
-                let (params, body) = funcs.get(name).expect("未定義の関数");
+            } else if let Some((params, body)) = funcs.get(name) {
                 if params.len() != args.len() {
                     panic!("引数の数が一致しません");
                 }
@@ -77,6 +76,8 @@ fn eval_expr(
                     new_vars.insert(p.clone(), eval_expr(a, funcs, vars, std_funcs));
                 }
                 eval_expr(body, funcs, &new_vars, std_funcs)
+            } else {
+                panic!("未定義の関数: {}", name);
             }
         }
     }

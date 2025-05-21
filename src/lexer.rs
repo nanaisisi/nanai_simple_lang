@@ -16,7 +16,6 @@ pub enum Token {
     Colon,
     Eq,
     StringLiteral(String),
-    Error(String),
     EOF,
 }
 
@@ -100,18 +99,13 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                             break;
                         }
                     }
-                } else {
-                    // 単独の/は不正文字扱い
-                    let pos = input.len() - chars.clone().count();
-                    let context: String =
-                        input.chars().skip(pos.saturating_sub(5)).take(10).collect();
-                    tokens.push(Token::Error(format!(
-                        "不正な文字: '/' (U+002F) 位置: {} 付近: '{}'",
-                        pos, context
-                    )));
                 }
             }
             ' ' | '\n' | '\r' | '\t' => {
+                chars.next();
+            }
+            // UTF-8 BOMや制御文字、ASCII範囲外の文字はスキップ（エラーにしない）
+            c if (c as u32) > 0x7F || c.is_control() => {
                 chars.next();
             }
             'a'..='z' | 'A'..='Z' | '_' => {
@@ -129,16 +123,12 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "mut" => tokens.push(Token::Mut),
                     "pub" => tokens.push(Token::Pub),
                     "fn" => tokens.push(Token::Fn),
+                    // "import"は予約語から除外
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }
+            // どんな文字でも未対応記号はすべてスキップ（エラーにしない）
             _ => {
-                let pos = input.len() - chars.clone().count();
-                let context: String = input.chars().skip(pos.saturating_sub(5)).take(10).collect();
-                tokens.push(Token::Error(format!(
-                    "不正な文字: '{}' (U+{:04X}) 位置: {} 付近: '{}'",
-                    c, c as u32, pos, context
-                )));
                 chars.next();
             }
         }
