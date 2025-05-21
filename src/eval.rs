@@ -65,7 +65,7 @@ fn eval_expr(
         Expr::Add(lhs, rhs) => {
             eval_expr(lhs, funcs, vars, std_funcs) + eval_expr(rhs, funcs, vars, std_funcs)
         }
-        Expr::Var(name) => *vars.get(name).expect("未定義の変数"),
+        Expr::Var(name) => *vars.get(name).unwrap_or(&0),
         Expr::Call(name, args) => {
             if let Some(f) = std_funcs.get(name) {
                 let arg_vals = args
@@ -85,6 +85,23 @@ fn eval_expr(
             } else {
                 panic!("未定義の関数: {}", name);
             }
+        }
+        Expr::Block(stmts) => {
+            let mut last = 0;
+            for stmt in stmts {
+                match stmt {
+                    Stmt::Expr(e) => last = eval_expr(e, funcs, vars, std_funcs),
+                    Stmt::Print(e) => {
+                        last = eval_expr(e, funcs, vars, std_funcs);
+                        std_funcs["print"](vec![last]);
+                    }
+                    Stmt::Let { name, value, .. } => {
+                        last = eval_expr(value, funcs, vars, std_funcs);
+                    }
+                    _ => {}
+                }
+            }
+            last
         }
     }
 }

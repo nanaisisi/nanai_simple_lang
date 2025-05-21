@@ -51,25 +51,15 @@ pub fn parse_funcdef(tokens: &[Token], pos: &mut usize) -> Stmt {
             *pos += 1;
             break;
         }
-        // 各文をparse_print/parse_let/parse_expr等でパース
         if let Some(stmt) = crate::parser::print::parse_print(tokens, pos) {
-            stmts.push(Stmt::Print(Box::new(match stmt {
-                Stmt::Print(expr) => *expr,
-                _ => Expr::Number(0),
-            })));
+            stmts.push(stmt);
         } else if tokens.get(*pos) == Some(&Token::Let) {
             stmts.push(crate::parser::let_stmt::parse_let(tokens, pos));
         } else {
             let expr = crate::parser::expr::parse_expr(tokens, pos);
-            stmts.push(Stmt::Expr(expr));
+            stmts.push(crate::ast::Stmt::Expr(expr));
         }
     }
-    // 複数文を1つのExpr::Blockにまとめる（AST拡張が必要）
-    // ここでは最終文のみ返す（暫定）
-    let body = if let Some(Stmt::Expr(expr)) = stmts.last() {
-        Box::new(expr.clone())
-    } else {
-        Box::new(Expr::Number(0))
-    };
+    let body = Box::new(crate::ast::Expr::Block(stmts));
     Stmt::FuncDef { name, params, body }
 }

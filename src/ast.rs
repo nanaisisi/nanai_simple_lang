@@ -5,6 +5,7 @@ pub enum Expr {
     Add(Box<Expr>, Box<Expr>),
     Var(String),
     Call(String, Vec<Expr>),
+    Block(Vec<Stmt>),
 }
 
 #[derive(Debug, Clone)]
