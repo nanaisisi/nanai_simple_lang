@@ -1,3 +1,4 @@
 /target
 node_modules
 package-lock.json
+nanai-simple-lang-syntax/nasl-syntax-0.0.1.vsix
