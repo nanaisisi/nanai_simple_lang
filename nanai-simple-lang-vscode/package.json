@@ -1,7 +1,7 @@
 {
-	"name": "nasl-syntax",
-	"displayName": "Nanai Simple Lang Syntax",
-	"description": "Rust風簡易言語(nanai_simple_lang)用のシンタックスハイライト (Rustベース)",
+	"name": "nasl-vscode",
+	"displayName": "Nanai Simple Lang Extensions",
+	"description": "Rust風簡易言語(nanai_simple_lang)用の拡張機能 (Rustベース)",
 	"version": "0.0.1",
 	"publisher": "nanaisisi",
 	"license": "MIT",
