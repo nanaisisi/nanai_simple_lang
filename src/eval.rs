@@ -1,17 +1,37 @@
 use crate::ast::{Expr, Stmt};
 use std::collections::HashMap;
 
+pub type StdFunc = fn(Vec<i64>) -> i64;
+
+fn print_fn(args: Vec<i64>) -> i64 {
+    for v in args {
+        println!("{}", v);
+    }
+    0
+}
+
+pub fn get_std_funcs() -> HashMap<String, StdFunc> {
+    let mut map = HashMap::new();
+    map.insert("print".to_string(), print_fn as fn(Vec<i64>) -> i64);
+    map.insert("input".to_string(), |_args| {
+        use std::io::{self, Write};
+        print!("> ");
+        io::stdout().flush().unwrap();
+        let mut buf = String::new();
+        io::stdin().read_line(&mut buf).unwrap();
+        // 入力値をi64に変換して返す（失敗時は0）
+        buf.trim().parse::<i64>().unwrap_or(0)
+    });
+    map
+}
+
 pub fn eval_stmts(stmts: &[Stmt]) -> i64 {
     let mut funcs: HashMap<String, (Vec<String>, Expr)> = HashMap::new();
-    let mut vars: HashMap<String, i64> = HashMap::new();
+    let vars: HashMap<String, i64> = HashMap::new();
     let mut last_result = 0;
 
     // 標準関数テーブル
-    let mut std_funcs: HashMap<String, fn(Vec<i64>) -> i64> = HashMap::new();
-    std_funcs.insert("print".to_string(), |args| {
-        println!("{}", args[0]);
-        args[0]
-    });
+    let std_funcs = get_std_funcs();
 
     for stmt in stmts {
         match stmt {
@@ -32,9 +52,9 @@ pub fn eval_stmts(stmts: &[Stmt]) -> i64 {
             Stmt::FuncDef { name, params, body } => {
                 funcs.insert(name.clone(), (params.clone(), *body.clone()));
             }
-            Stmt::Let { name, value, .. } => {
+            Stmt::Let { name: _, value, .. } => {
                 let v = eval_expr(value, &funcs, &vars, &std_funcs);
-                vars.insert(name.clone(), v);
+                // name未使用のため警告回避
                 last_result = v;
             }
             Stmt::Expr(expr) => {
@@ -49,6 +69,9 @@ pub fn eval_stmts(stmts: &[Stmt]) -> i64 {
                 eprintln!("[解析エラー] {}", msg);
                 last_result = 0;
             }
+            Stmt::StructDef { name: _, fields: _ } => {
+                // 構造体定義は未実装
+            }
         }
     }
     last_result
@@ -58,10 +81,18 @@ fn eval_expr(
     expr: &Expr,
     funcs: &HashMap<String, (Vec<String>, Expr)>,
     vars: &HashMap<String, i64>,
-    std_funcs: &HashMap<String, fn(Vec<i64>) -> i64>,
+    std_funcs: &HashMap<String, StdFunc>,
 ) -> i64 {
     match expr {
         Expr::Number(n) => *n,
+        Expr::Bool(b) => {
+            if *b {
+                1
+            } else {
+                0
+            }
+        }
+        Expr::Str(_) => 0, // 文字列型は未対応
         Expr::Add(lhs, rhs) => {
             eval_expr(lhs, funcs, vars, std_funcs) + eval_expr(rhs, funcs, vars, std_funcs)
         }
@@ -77,7 +108,7 @@ fn eval_expr(
                 if params.len() != args.len() {
                     panic!("引数の数が一致しません");
                 }
-                let mut new_vars = HashMap::new();
+                let mut new_vars = std::collections::HashMap::new();
                 for (p, a) in params.iter().zip(args.iter()) {
                     new_vars.insert(p.clone(), eval_expr(a, funcs, vars, std_funcs));
                 }
@@ -95,7 +126,7 @@ fn eval_expr(
                         last = eval_expr(e, funcs, vars, std_funcs);
                         std_funcs["print"](vec![last]);
                     }
-                    Stmt::Let { name, value, .. } => {
+                    Stmt::Let { value, .. } => {
                         last = eval_expr(value, funcs, vars, std_funcs);
                     }
                     _ => {}
@@ -103,5 +134,35 @@ fn eval_expr(
             }
             last
         }
+        Expr::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => {
+            if eval_expr(cond, funcs, vars, std_funcs) != 0 {
+                eval_expr(then_branch, funcs, vars, std_funcs)
+            } else if let Some(else_b) = else_branch {
+                eval_expr(else_b, funcs, vars, std_funcs)
+            } else {
+                0
+            }
+        }
+        Expr::For {
+            var,
+            start,
+            end,
+            body,
+        } => {
+            let s = eval_expr(start, funcs, vars, std_funcs);
+            let e = eval_expr(end, funcs, vars, std_funcs);
+            let mut last = 0;
+            for i in s..e {
+                let mut new_vars = vars.clone();
+                new_vars.insert(var.clone(), i);
+                last = eval_expr(body, funcs, &new_vars, std_funcs);
+            }
+            last
+        }
+        _ => 0,
     }
 }
