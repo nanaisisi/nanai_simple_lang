@@ -1,3 +1,5 @@
+# AI 生成です。
+
 # nanai_simple_lang
 
 ## 目的
